@@ -6,8 +6,6 @@
 
 #define GUEST_COUNT 10
 
-
-// Labyrinth
 class Labyrinth
 {
 private:
@@ -20,16 +18,18 @@ public:
         hasCupcake = true;
     }
 
-    // Enter the labyrinth
+    // Enter the labyrinth and prevent other guests from entering
     void enterLabyrinth()
     {
         m.lock();
+        std::cout << "Guest has entered the labyrinth" << std::endl;
     }
 
-    // Exit the labyrinth
+    // Exit the labyrinth and allow other guests to enter
     void exitLabyrinth()
     {
         m.unlock();
+        std::cout << "Guest has exited the labyrinth" << std::endl;
     }
 
     // Replace the cupcake at the exit
@@ -44,6 +44,7 @@ public:
         hasCupcake = false;
     }
 
+    // Check if the cupcake is at the exit
     bool isCupcakeAtExit()
     {
         return hasCupcake;
@@ -62,6 +63,7 @@ public:
         inLabyrinth = false;
     }
 
+    // Check if the guest is inside the labyrinth
     bool isInsideLabyrinth()
     {
         return inLabyrinth;
@@ -73,24 +75,26 @@ public:
         maze->enterLabyrinth();
         inLabyrinth = true;
 
-        // If the guest has already entered the labyrinth, they should not ask for the cupcake to be replaced
-        if (hasEntered)
-        {
-            std::cout << "Guest exits the labyrinth" << std::endl;
-            maze->exitLabyrinth();
-            inLabyrinth = false;
-            return;
-        }
         // If the guest has not entered the labyrinth, they should take the cupcake if it is at the exit
-        if (!(maze->isCupcakeAtExit()))
+        if (!hasEntered)
         {
-            maze->replaceCupcake();
-            std::cout << "Guest asks for the cupcake to be replaced" << std::endl;
+            if (!(maze->isCupcakeAtExit()))
+            {
+                maze->replaceCupcake();
+                std::cout << "Guest asks for the cupcake to be replaced" << std::endl;
+            }
+            maze->takeCupcake();
+            std::cout << "Guest takes the cupcake" << std::endl;
         }
-        maze->takeCupcake();
-        std::cout << "Guest takes the cupcake" << std::endl;
-
-        std::cout << "Guest exits the labyrinth" << std::endl;
+        // If the guest has entered the labyrinth, they should replace the cupcake if it is not at the exit
+        else
+        {
+            if (!(maze->isCupcakeAtExit()))
+            {
+                maze->replaceCupcake();
+                std::cout << "Guest asks for the cupcake to be replaced" << std::endl;
+            }
+        }
         hasEntered = true;
         maze->exitLabyrinth();
         inLabyrinth = false;
@@ -99,43 +103,41 @@ public:
 
 int main()
 {
-    Labyrinth* labyrinth = new Labyrinth();
+    Labyrinth *labyrinth = new Labyrinth();
 
     Guest *guests = new Guest[GUEST_COUNT];
-    std::thread *threads = (std::thread *) malloc(sizeof(std::thread) * 0);
 
     srand((unsigned)time(NULL));
-    int threadCount = 0, noCupcakeCount = 0;
+    
+    // Number of consecutive times the cupcake is found at the exit after a guest has gone through the labyrinth
+    int cupcakeCount = 0;
     do
     {
         // Randomly select a guest to enter the labyrinth
-
         int guestIndex;
-        do {
-            guestIndex = rand() % GUEST_COUNT;
+        do
+        {
+            guestIndex = rand() % (GUEST_COUNT - 1);
         } while (guests[guestIndex].isInsideLabyrinth());
-        std::cout << "Guest " << guestIndex << " is entering the labyrinth" << std::endl;
+        std::cout << "Guest " << guestIndex << " is called to enter the labyrinth" << std::endl;
 
         // Create a new thread for the guest
-        threads = (std::thread *) realloc(threads, sizeof(std::thread) * (threadCount + 1));
-        threads[threadCount] = std::thread(&Guest::enter, &guests[guestIndex], &labyrinth);        threadCount++;
+        std::thread(&Guest::enter, &guests[guestIndex], labyrinth).detach();
 
         // Check if the cupcake is at the exit
         if (!labyrinth->isCupcakeAtExit())
         {
-            noCupcakeCount++;
+            cupcakeCount = 0;
         }
         else
         {
-            noCupcakeCount = 0;
+            cupcakeCount++;
         }
-    } while (noCupcakeCount < GUEST_COUNT); // Repeat until the cupcake is not at the exit for GUEST_COUNT times
+        std::cout << std::endl;
+    } while (cupcakeCount < GUEST_COUNT); // If the cupcake is found at the exit GUEST_COUNT times, all guests have gone through the labyrinth
 
-    // Wait for all threads to finish
-    for (int i = 0; i < threadCount; i++)
-    {
-        threads[i].join();
-    }
+    std::cout << "All guests have gone through the labyrinth" << std::endl;
+
     delete[] guests;
 
     return 0;
