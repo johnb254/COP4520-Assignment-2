@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cstdlib>
 #include <random>
 #include <thread>
 #include <mutex>
@@ -108,7 +107,7 @@ int main()
     Guest *guests = new Guest[GUEST_COUNT];
 
     srand((unsigned)time(NULL));
-    
+
     // Number of consecutive times the cupcake is found at the exit after a guest has gone through the labyrinth
     int cupcakeCount = 0;
     do
